@@ -1,8 +1,7 @@
 from fastapi import FastAPI
-from routes.authentication import router as auth_router
-from routes.get_movielist import router as movie_router
+from routes import authentication, get_movielist
 
 app = FastAPI()
 
-app.include_router(auth_router, prefix="/auth", tags=["Auth"])
-app.include_router(movie_router, prefix="/movies", tags=["Movies"])
+app.include_router(authentication.router)
+app.include_router(get_movielist.router)

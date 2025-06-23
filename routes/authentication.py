@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from pydantic import BaseModel, EmailStr, field_validator
-from ..database import users_collection
+from database import users_collection
 from bson import ObjectId
 
 router = APIRouter()

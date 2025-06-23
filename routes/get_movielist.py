@@ -8,11 +8,12 @@ router = APIRouter()
 class Movie(BaseModel):
     title: str
     director: str
+    year : int
 
 @router.post("/add_movie")
 def add_movie(movie: Movie):
     result = movies_collection.insert_one(movie.model_dump())
-    return {"id": str(result.inserted_id), "msg": "Movie added"}
+    return {"msg": "Movie added"}
 
 @router.get("/movies")
 def get_movies():
@@ -21,21 +22,14 @@ def get_movies():
         movies.append({
             "id": str(movie["_id"]),
             "title": movie["title"],
-            "director": movie["director"]
+            "director": movie["director"],
+            "year" : movie["year"]
         })
     return movies
 
-@router.put("/update_movie/{movie_id}")
-def update_movie(movie_id: str, updated_movie: Movie):
-    result = movies_collection.update_one(
-        {"_id": ObjectId(movie_id)},
-        {"$set": updated_movie.model_dump()}
-    )
-    if result.matched_count == 0:
-        return {"msg:": "Movie not found"}
-    return {"msg": "Movie updated"}
 
-@router.delete("/delete_movie/{movie_id}")
+
+@router.delete("/delete")
 def delete_movie(movie_id: str):
     result = movies_collection.delete_one({"_id": ObjectId(movie_id)})
     if result.deleted_count == 0:
