@@ -1,0 +1,30 @@
+
+
+services:
+  mongo:
+    image: mongo:8.0-noble
+    container_name: mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: 21june_database
+
+  fastapi:
+    build:
+      context: .
+      dockerfile: dockerfile
+    container_name: 21june-app
+    restart: always
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongo
+    environment:
+      MONGO_URL: mongodb://mongo:27017/21june_database
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  mongo-data:
