@@ -4,4 +4,6 @@ pymongo
 pydantic
 email-validator
 bcrypt
-jwt
+PyJWT
+jose
+python-multipart

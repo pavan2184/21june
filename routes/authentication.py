@@ -1,10 +1,36 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr, field_validator
 from database import users_collection
 import bcrypt
 from datetime import datetime, timedelta
 import jwt
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
+
+token_expiry = 30
+secret_key = 'xxyyzz'
+algorithm = 'HS256' 
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+def create_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.now() + timedelta(minutes=token_expiry)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, secret_key, algorithm = algorithm)
+
+def decode_token(token: str):
+    try:
+        payload = jwt.decode(token, secret_key, algorithms=[algorithm])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    payload = decode_token(token)
+    return payload.get("email") 
 
 
 router = APIRouter()
@@ -33,14 +59,14 @@ class UserRegister(BaseModel):
         import re
         if len(pw) < 8:
             raise ValueError("Password must be at least 8 characters")
-        if not re.search(r"[A-Z]", pw):
-            raise ValueError("Password must include an uppercase letter")
-        if not re.search(r"[a-z]", pw):
-            raise ValueError("Password must include a lowercase letter")
         if not re.search(r"\d", pw):
             raise ValueError("Password must include a digit")
         if not re.search(r"[@$!%*?&]", pw):
             raise ValueError("Password must include a special character (@$!%*?&)")
+        if not re.search(r"[A-Z]", pw):
+            raise ValueError("Password must include an uppercase letter")
+        if not re.search(r"[a-z]", pw):
+            raise ValueError("Password must include a lowercase letter")
         return pw
 
 
@@ -56,27 +82,15 @@ def register(user: UserRegister):
     users_collection.insert_one(user_data)
     return {"msg": "User registered successfully"}
 
-@router.post("/login")
-def login(user: UserRegister):
-    found = users_collection.find_one({"email": user.email})
-    if not found or not Passwords.verify_password(str(user.password), str(found["password"])):
-        return {"msg": "wrong email or password"}
-    
-    access_token = create_token(data={"email": found["email"]})
+@router.post("/token")
+def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = users_collection.find_one({"email": form_data.username})
+    if not user or not Passwords.verify_password(form_data.password, user["password"]):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    return {"msg": "Login successful", " token": access_token}
+    access_token = create_token(data={"email": user["email"]})
+    return {"access_token": access_token, "token_type": "bearer"}
 
-
-token_expiry = 30
-secret_key = 'xxyyzz'
-algorithm = 'RS256' # or 'HS256'  tocheck
-
-
-def create_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.now() + timedelta(minutes=token_expiry)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, secret_key, algorithm)
 
 
 @router.get("/all-users")
