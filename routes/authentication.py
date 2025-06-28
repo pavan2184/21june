@@ -50,26 +50,6 @@ class Passwords:
         return bcrypt.checkpw(user_bytes, hashed_bytes)
 
 
-class UserRegister(BaseModel):
-    email: EmailStr
-    password: str
-
-    @field_validator("password")
-    def validate_password(cls, pw):
-        import re
-        if len(pw) < 8:
-            raise ValueError("Password must be at least 8 characters")
-        if not re.search(r"\d", pw):
-            raise ValueError("Password must include a digit")
-        if not re.search(r"[@$!%*?&]", pw):
-            raise ValueError("Password must include a special character (@$!%*?&)")
-        if not re.search(r"[A-Z]", pw):
-            raise ValueError("Password must include an uppercase letter")
-        if not re.search(r"[a-z]", pw):
-            raise ValueError("Password must include a lowercase letter")
-        return pw
-
-
 @router.post("/register")
 def register(user: UserRegister):
     if users_collection.find_one({"email": user.email}):
@@ -91,10 +71,29 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     access_token = create_token(data={"email": user["email"]})
     return {"access_token": access_token, "token_type": "bearer"}
 
-
-
 @router.get("/all-users")
 def get_all_users():
     users = list(users_collection.find({}, {"_id": 0}))  
     return users
+
+
+class UserRegister(BaseModel):
+    email: EmailStr
+    password: str
+
+    @field_validator("password")
+    def validate_password(cls, pw):
+        import re
+        if len(pw) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        if not re.search(r"\d", pw):
+            raise ValueError("Password must include a digit")
+        if not re.search(r"[@$!%*?&]", pw):
+            raise ValueError("Password must include a special character (@$!%*?&)")
+        if not re.search(r"[A-Z]", pw):
+            raise ValueError("Password must include an uppercase letter")
+        if not re.search(r"[a-z]", pw):
+            raise ValueError("Password must include a lowercase letter")
+        return pw
+
 
